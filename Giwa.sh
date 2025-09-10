@@ -25,6 +25,8 @@ log() { echo -e "${BLUE}[INFO]${RESET} $1"; }
 success() { echo -e "${GREEN}[SUCCESS]${RESET} $1"; }
 error() { echo -e "${RED}[ERROR]${RESET} $1"; }
 
+pause() { read -p "按 Enter 返回菜单..."; }
+
 # ----- 安装精简依赖 + Docker + Docker Compose -----
 install_env() {
   log "更新系统并安装精简依赖..."
@@ -130,14 +132,42 @@ stop_node() {
 clean_node() {
   cd "$NODE_DIR" || exit
   log "停止并清理所有数据..."
-  docker compose down -v && rm -rf ./execution_data
+  docker compose down -v
+  rm -rf ./execution_data
   success "数据已清理！"
 }
 
-# ----- 查看日志 -----
+# ----- 分菜单查看日志 -----
 show_logs() {
-  log "查看执行层日志 (CTRL+C 退出)..."
-  docker logs -f giwa-el
+  while true; do
+    clear
+    echo -e "${GREEN}===== Giwa 节点日志查看 / Log Viewer =====${RESET}"
+    echo "1) 查看执行层日志 (Execution Layer)"
+    echo "2) 查看共识层日志 (Consensus Layer)"
+    echo "3) 返回主菜单"
+    echo "-----------------------------------------------"
+    read -p "请选择操作 [1-3]: " LOG_CHOICE
+
+    case $LOG_CHOICE in
+      1)
+        log "正在查看执行层日志 (CTRL+C 退出)..."
+        docker logs -f giwa-el
+        pause
+        ;;
+      2)
+        log "正在查看共识层日志 (CTRL+C 退出)..."
+        docker logs -f giwa-cl
+        pause
+        ;;
+      3)
+        break
+        ;;
+      *)
+        error "无效选择，请重新输入！"
+        sleep 1
+        ;;
+    esac
+  done
 }
 
 # ----- 主菜单 -----
@@ -167,5 +197,5 @@ menu() {
 # ----- 主循环 -----
 while true; do
   menu
-  read -p "按 Enter 返回菜单..."
+  pause
 done
