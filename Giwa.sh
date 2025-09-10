@@ -5,7 +5,7 @@
 
 # 📌 作者: K2 Node
 # 🔗 Telegram: https://t.me/+EaCiFDOghoM3Yzll
-# 🐦 Twitter:  https://x.com/BtcK241918
+# 🐦 Twitter: https://x.com/BtcK241918
 # -----------------------------------------------
 
 # ----- 颜色定义 -----
@@ -24,8 +24,6 @@ ENV_FILE="$NODE_DIR/.env"
 log() { echo -e "${BLUE}[INFO]${RESET} $1"; }
 success() { echo -e "${GREEN}[SUCCESS]${RESET} $1"; }
 error() { echo -e "${RED}[ERROR]${RESET} $1"; }
-
-pause() { read -p "按 Enter 返回菜单..."; }
 
 # ----- 安装精简依赖 + Docker + Docker Compose -----
 install_env() {
@@ -81,11 +79,12 @@ config_env() {
   fi
 
   echo -e "${YELLOW}请填写你的以太坊 RPC 和 Beacon 节点信息:${RESET}"
-  read -p "输入 L1 RPC URL: " L1_RPC
-  read -p "输入 L1 BEACON URL: " L1_BEACON
+  read -p "输入 L1 RPC URL (Infura/Alchemy): " L1_RPC
+  read -p "输入 L1 Beacon URL (OnFinality): " L1_BEACON
 
-  sed -i "s|^L1_RPC_URL=.*|L1_RPC_URL=$L1_RPC|" "$ENV_FILE"
-  sed -i "s|^L1_BEACON_URL=.*|L1_BEACON_URL=$L1_BEACON|" "$ENV_FILE"
+  # 替换共识层 .env 字段
+  sed -i "s|^OP_NODE_L1_ETH_RPC=.*|OP_NODE_L1_ETH_RPC=$L1_RPC|" "$ENV_FILE"
+  sed -i "s|^OP_NODE_L1_BEACON=.*|OP_NODE_L1_BEACON=$L1_BEACON|" "$ENV_FILE"
 
   log "请选择同步模式:"
   echo "1) snap (推荐测试网)"
@@ -132,41 +131,26 @@ stop_node() {
 clean_node() {
   cd "$NODE_DIR" || exit
   log "停止并清理所有数据..."
-  docker compose down -v
-  rm -rf ./execution_data
+  docker compose down -v && rm -rf ./execution_data
   success "数据已清理！"
 }
 
-# ----- 分菜单查看日志 -----
+# ----- 查看日志 -----
 show_logs() {
   while true; do
     clear
-    echo -e "${GREEN}===== Giwa 节点日志查看 / Log Viewer =====${RESET}"
-    echo "1) 查看执行层日志 (Execution Layer)"
-    echo "2) 查看共识层日志 (Consensus Layer)"
-    echo "3) 返回主菜单"
-    echo "-----------------------------------------------"
-    read -p "请选择操作 [1-3]: " LOG_CHOICE
-
+    echo -e "${YELLOW}===== 查看节点日志 =====${RESET}"
+    echo "1) 执行层日志 (EL)"
+    echo "2) 共识层日志 (CL)"
+    echo "0) 返回菜单"
+    read -p "选择日志类型: " LOG_CHOICE
     case $LOG_CHOICE in
-      1)
-        log "正在查看执行层日志 (CTRL+C 退出)..."
-        docker logs -f giwa-el
-        pause
-        ;;
-      2)
-        log "正在查看共识层日志 (CTRL+C 退出)..."
-        docker logs -f giwa-cl
-        pause
-        ;;
-      3)
-        break
-        ;;
-      *)
-        error "无效选择，请重新输入！"
-        sleep 1
-        ;;
+      1) docker logs -f giwa-el ;;
+      2) docker logs -f giwa-cl ;;
+      0) break ;;
+      *) error "无效选项" ;;
     esac
+    read -p "按 Enter 返回日志菜单..."
   done
 }
 
@@ -197,5 +181,5 @@ menu() {
 # ----- 主循环 -----
 while true; do
   menu
-  pause
+  read -p "按 Enter 返回菜单..."
 done
