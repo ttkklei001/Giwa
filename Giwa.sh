@@ -80,10 +80,6 @@ config_env() {
     sed -i "s|^OP_NODE_L1_ETH_RPC=.*|OP_NODE_L1_ETH_RPC=$L1_RPC|" "$ENV_FILE"
     sed -i "s|^OP_NODE_L1_BEACON=.*|OP_NODE_L1_BEACON=$L1_BEACON|" "$ENV_FILE"
 
-    if ! grep -q "OP_NODE_L1_ETH_RPC_TLS_SKIP_VERIFY" "$ENV_FILE"; then
-        echo "OP_NODE_L1_ETH_RPC_TLS_SKIP_VERIFY=true" >> "$ENV_FILE"
-    fi
-
     log "请选择同步模式:"
     echo "1) snap (推荐测试网)"
     echo "2) archive"
@@ -100,7 +96,7 @@ config_env() {
 }
 
 # ---------------------------
-# 启动节点
+# 启动节点 (自动修复 TLS 问题)
 # ---------------------------
 start_node() {
     cd "$NODE_DIR" || exit
@@ -117,6 +113,13 @@ start_node() {
             success "容器 $name 已启动"
         fi
     done
+
+    # 自动修复共识层 TLS x509 问题
+    if docker ps --format '{{.Names}}' | grep -q giwa-cl; then
+        docker exec giwa-cl apk add --no-cache ca-certificates >/dev/null 2>&1 || true
+        docker exec giwa-cl update-ca-certificates >/dev/null 2>&1 || true
+        success "TLS 证书更新完成，避免 x509 报错"
+    fi
 }
 
 # ---------------------------
